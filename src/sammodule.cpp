@@ -1,12 +1,13 @@
 #include <iostream>
 #include <ros/ros.h>
+
 #include <fcntl.h>
 #include <termio.h>
 #include <sys/stat.h>
 using namespace std;
 
 #include "sam_hub/sammodule.h"
-
+#define NUM_OF_SAM_ 25
 SAMmodule::SAMmodule()
 {
     Serial = InitSerial(_SERIAL_PORT_SAM);
@@ -302,11 +303,11 @@ void SAMmodule::setAllPos12(unsigned int *Pos, unsigned char numOfSam)
             ba[refIndex++]=*(Pos+i)&0x7F;
             ba[refIndex]=(ba[refIndex-3]^ba[refIndex-2]^ba[refIndex-1])&0x7F;
             refIndex++;
-            cout <<(unsigned int)*(Pos+i)<<":";
+//            cout <<(unsigned int)*(Pos+i)<<":";
         }
     }
     ba[refIndex] =0xfe;
-    cout<<endl;
+//    cout<<endl;
     Send_Serial_String(Serial,ba,numOfSam*4+3);
 }
 
@@ -359,6 +360,27 @@ void SAMmodule::setAllPDQuick(const unsigned char *Pvalue, const unsigned char *
     }
     ba[refIndex] =0xfe;
     Send_Serial_String(Serial,ba,numOfSam*4+3);
+}
+
+void SAMmodule::setAllPIDQuick(const unsigned char *Pvalue, const unsigned char *Dvalue, const unsigned char *Ivalue, unsigned char numOfSam)
+{
+    unsigned char ba[numOfSam*5+3];
+    ba[0] = 0xff;
+    ba[1] = 0xc2;
+
+    unsigned char refIndex=2;
+    for(unsigned char i=0; i<numOfSam;i++)
+    {
+
+        ba[refIndex++]=(i&0x1F)+(((*(Pvalue+i))&0x80)>>1)+(((*(Dvalue+i))&0x80)>>2);//id
+        ba[refIndex++]=(*(Pvalue+i))&0x7F;
+        ba[refIndex++]=(*(Dvalue+i))&0x7F;
+        ba[refIndex++]=(*(Ivalue+i))&0x7F;
+        ba[refIndex]=(ba[refIndex-4]^ba[refIndex-3]^ba[refIndex-2]^ba[refIndex-1])&0x7F;
+        refIndex++;
+    }
+    ba[refIndex] =0xfe;
+    Send_Serial_String(Serial,ba,numOfSam*5+3);
 }
 
 void SAMmodule::getAllPDQuick()

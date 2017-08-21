@@ -1,2 +1,3 @@
-uint8[25] SAMPos12Avail
-uint16[25] SAMPos12
+uint8[25] P
+uint8[25] D
+uint8[25] I

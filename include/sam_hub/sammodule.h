@@ -79,6 +79,7 @@ public:
     void getAllAverageTorque();
 
     void setAllPDQuick(const unsigned char *Pvalue,const unsigned char *Dvalue,unsigned char numOfSam);
+     void setAllPIDQuick(const unsigned char *Pvalue,const unsigned char *Dvalue,const unsigned char *Ivalue,unsigned char numOfSam);
     void getAllPDQuick();
 };
 

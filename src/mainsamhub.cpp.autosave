@@ -243,7 +243,7 @@ int main(int argc, char **argv){
                         yValue[9]=yValue[8]*-sin(angle[6])+zValue[8]*-cos(angle[6]);
                         zValue[9]=yValue[8]*cos(angle[6])+zValue[8]*-sin(angle[6]);
 
-      //=========================================
+
                         xValue[10]=xValue[9]*sin(angle[8])+yValue[9]*cos(angle[8])-0.063895;
                         yValue[10]=xValue[9]*-cos(angle[8])+yValue[9]*sin(angle[8]);
                         zValue[10]=zValue[9];
@@ -252,7 +252,7 @@ int main(int argc, char **argv){
                         yValue[11]=yValue[10]*-sin(angle[10])+zValue[10]*-cos(angle[10])-0.00034;
                         zValue[11]=xValue[10]-0.06;
 
-
+      //=========================================
                         samtfCalMsg.CN1=xValue[11];
                         samtfCalMsg.CN2=yValue[11];
                         samtfCalMsg.CN3=zValue[11];
