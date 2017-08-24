@@ -44,7 +44,9 @@ public:
 
     unsigned char flagDataReceived_readAllPos8:1;
 
+#define DELTA_SAM_NOISE 100
     unsigned int samPos12[30];
+    int pre_samPos12[30];
     unsigned char samPos12Avail[30];
 
     void Send_Serial_String(int Serial, unsigned char *Trans_chr, int Size);

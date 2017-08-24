@@ -11,6 +11,7 @@ using namespace std;
 SAMmodule::SAMmodule()
 {
     Serial = InitSerial(_SERIAL_PORT_SAM);
+    memset(pre_samPos12,'\0',30);
 }
 
 void SAMmodule::Recev_Data_hanlder()
@@ -55,8 +56,26 @@ void SAMmodule::Recev_Data_hanlder()
                 {
                     if(Store_chr[i*4+5]==((Store_chr[i*4+2]^Store_chr[i*4+3]^Store_chr[i*4+4])&0x7F))
                     {
-                        samPos12[Store_chr[i*4+2]&0x1F]=(Store_chr[i*4+4]&0x7F)+((Store_chr[i*4+3]&0x1F)<<7);
-                        samPos12Avail[Store_chr[i*4+2]&0x1F]=1;
+                        unsigned int dataPos=(Store_chr[i*4+4]&0x7F)+((Store_chr[i*4+3]&0x1F)<<7);
+                        unsigned char index=Store_chr[i*4+2]&0x1F;
+
+                        //                        samPos12[index]=dataPos;
+                        //                        samPos12Avail[index]=1;
+                        int delta_noise;
+                        delta_noise=(int)dataPos-(int)pre_samPos12[index];
+                        if(abs(delta_noise)<DELTA_SAM_NOISE){
+                            samPos12[index]=dataPos;
+                            samPos12Avail[index]=1;
+
+                        }else{
+                            ROS_ERROR("error sam feedback: %d | delta noise: %d",index,delta_noise);
+                        }
+
+                        pre_samPos12[index]=dataPos;
+
+
+                        //                        samPos12[Store_chr[i*4+2]&0x1F]=(Store_chr[i*4+4]&0x7F)+((Store_chr[i*4+3]&0x1F)<<7);
+                        //                        samPos12Avail[Store_chr[i*4+2]&0x1F]=1;
                     }
                     else
                         cout<<"error checksum 1"<<endl;
@@ -303,11 +322,11 @@ void SAMmodule::setAllPos12(unsigned int *Pos, unsigned char numOfSam)
             ba[refIndex++]=*(Pos+i)&0x7F;
             ba[refIndex]=(ba[refIndex-3]^ba[refIndex-2]^ba[refIndex-1])&0x7F;
             refIndex++;
-//            cout <<(unsigned int)*(Pos+i)<<":";
+            //            cout <<(unsigned int)*(Pos+i)<<":";
         }
     }
     ba[refIndex] =0xfe;
-//    cout<<endl;
+    //    cout<<endl;
     Send_Serial_String(Serial,ba,numOfSam*4+3);
 }
 
@@ -448,6 +467,6 @@ int SAMmodule::InitSerial(const char *Serial_Port)
 
     tcflush(Serial, TCIFLUSH);
     tcsetattr(Serial, TCSANOW, &Serial_Setting);
-   return Serial;
+    return Serial;
 
 }

@@ -1,3 +1,4 @@
+#define SAM_ACTUATOR_
 #include <iostream>
 #include <ros/ros.h>
 using namespace std;
@@ -61,11 +62,15 @@ void sub_function_pos12(const sam_hub::SAMJointPos12Msg::ConstPtr& msg){
         if(msg->SAMMode[i])
             pos12[i]=msg->SAMPos12[i];
     }
+#ifdef SAM_ACTUATOR_
     mySAM->setAllPos12(pos12,12);
+#endif
 
     if(msg->SAMMode[22]){
         usleep(5000);
+#ifdef SAM_ACTUATOR_
         mySAM->setSamPos12(22,pos12[22]);
+#endif
     }
 }
 
@@ -224,7 +229,7 @@ int main(int argc, char **argv){
                         xValue[5]=yValue[4]*-cos(angle[11])+zValue[4]*sin(angle[11])+0.057;
                         yValue[5]=yValue[4]*-sin(angle[11])+zValue[4]*-cos(angle[11])-0.00034;
                         zValue[5]=xValue[4]-0.06;
-
+//===================================================
                         xValue[6]=0.083*-cos(-angle[0]);
                         yValue[6]=0.083*-sin(-angle[0]);
                         zValue[6]=0;
@@ -243,7 +248,7 @@ int main(int argc, char **argv){
                         yValue[9]=yValue[8]*-sin(angle[6])+zValue[8]*-cos(angle[6]);
                         zValue[9]=yValue[8]*cos(angle[6])+zValue[8]*-sin(angle[6]);
 
-      //=========================================
+
                         xValue[10]=xValue[9]*sin(angle[8])+yValue[9]*cos(angle[8])-0.063895;
                         yValue[10]=xValue[9]*-cos(angle[8])+yValue[9]*sin(angle[8]);
                         zValue[10]=zValue[9];
@@ -252,11 +257,13 @@ int main(int argc, char **argv){
                         yValue[11]=yValue[10]*-sin(angle[10])+zValue[10]*-cos(angle[10])-0.00034;
                         zValue[11]=xValue[10]-0.06;
 
-
+      //=========================================
                         samtfCalMsg.CN1=xValue[11];
                         samtfCalMsg.CN2=yValue[11];
                         samtfCalMsg.CN3=zValue[11];
-                        samtfCalMsg.CN4=angle[10];
+                        samtfCalMsg.CN4=xValue[5];
+                        samtfCalMsg.CN6=yValue[5];
+                        samtfCalMsg.CN7=zValue[5];
                         sam_tfCal_pub.publish(samtfCalMsg);
 
                     }
