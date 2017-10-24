@@ -53,47 +53,49 @@ void sub_function_cmd(const sam_hub::SAMcmdMsg::ConstPtr& msg){
         break;
     }
 }
-
+unsigned int SAMpos12[25];
+unsigned char SAMmode[25];
+unsigned int torque[12];
+unsigned char samP[12];
+unsigned char samD[12];
 
 void sub_function_pos12(const sam_hub::SAMJointPos12Msg::ConstPtr& msg){
-    unsigned int pos12[25];
+
     for (unsigned char i=0; i<25;i++)
     {
-        if(msg->SAMMode[i])
-            pos12[i]=msg->SAMPos12[i];
+        if(msg->SAMMode[i]==1)
+        {
+            SAMpos12[i]=msg->SAMPos12[i];
+            SAMmode[i]=1;
+        }else if(msg->SAMMode[i]==2){// this mode is usefulless if reading position after this command
+            SAMpos12[i]=msg->SAMPos12[i];
+            SAMmode[i]=2;
+        }
     }
-#ifdef SAM_ACTUATOR_
-    mySAM->setAllPos12(pos12,12);
-#endif
-
-    if(msg->SAMMode[22]){
-        usleep(5000);
-#ifdef SAM_ACTUATOR_
-        mySAM->setSamPos12(22,pos12[22]);
-#endif
-    }
+    sys_flag.readyToSend=1;
 }
 
 void sub_function_torque(const sam_hub::SAMJointTorqueMsg::ConstPtr& msg){
-    unsigned int torque[12];
+
     for (unsigned char i=0; i<12;i++)
     {
         torque[i]=msg->Torque[i];
         cout<<"torque:"<<(int)torque[i]<<endl;
     }
+    sys_flag.readyToSetTorque=1;
     mySAM->setAllAverageTorque(torque,12);
 }
 
 void sub_function_pid(const sam_hub::SAMJointPIDMsg::ConstPtr& msg){
-    unsigned char samP[12];
-    unsigned char samD[12];
+
     for (unsigned char i=0; i<12;i++)
     {
         samP[i]=msg->P[i];
         samD[i]=msg->D[i];
         cout<<"sam P:"<<(int)samP[i]<<"sam D:"<< (int)samD[i]<<endl;
-        //        pos12[i]=msg->[i];
+
     }
+    sys_flag.readyToSetPID=1;
     mySAM->setAllPDQuick(samP,samD,12);
 }
 
@@ -141,10 +143,12 @@ int main(int argc, char **argv){
                 if(sys_flag.getPos12LowerLink_50Hz)
                 {
                     mySAM->getAllPos12();
+                    sys_flag.communicationBusy=1;
                 }
                 else if(sys_flag.getPos12FullBody_50Hz)
                 {
                     mySAM->getAllPos12Full();;
+                    sys_flag.communicationBusy=1;
                 }
             }
             if(FlagTimer.Hz_100)
@@ -158,10 +162,12 @@ int main(int argc, char **argv){
                 if(sys_flag.getPos12LowerLink_125Hz)
                 {
                     mySAM->getAllPos12();
+                    sys_flag.communicationBusy=1;
                 }
                 else if(sys_flag.getPos12FullBody_125Hz)
                 {
-                    mySAM->getAllPos12Full();;
+                    mySAM->getAllPos12Full();
+                    sys_flag.communicationBusy=1;
                 }
             }
 
@@ -170,32 +176,36 @@ int main(int argc, char **argv){
             mySAM->Recev_Data_hanlder();
             if(mySAM->flagDataReceived_readAllPos12){
                 mySAM->flagDataReceived_readAllPos12=0;
+                sys_flag.communicationBusy=0;
+
                 //===========================================
-                //                unsigned char Trans_chr[1] ={ '1'};
-                //                mySAM->Send_Serial_String(mySAM->Serial, Trans_chr, 1);
+//                unsigned char Trans_chr[1] ={ '1'};
+//                mySAM->Send_Serial_String(mySAM->Serial, Trans_chr, 1);
 
                 for(unsigned char i=0; i<25;i++){
                     if(mySAM->samPos12Avail[i])
                     {
                         samMsg.SAMPos12Avail[i]=1;
-                        samMsg.SAMPos12[i]=mySAM->samPos12[i];
+                        samMsg.SAMPosDegree[i]=((double)mySAM->samPos12[i]-(double)samPos12_hardware[i])*pos12bitToDegree;
                     }else{
                         samMsg.SAMPos12Avail[i]=0;
-                        samMsg.SAMPos12[i]=0;
+                        samMsg.SAMPosDegree[i]=0;
                     }
                 }
 
                 unsigned char lowerLinkCount=0;
-                for(unsigned char i=0; i<12; i++){
+                for(unsigned char i=0; i<25; i++){
                     if(mySAM->samPos12Avail[i])
                         lowerLinkCount++;
                 }
-
                 if(sys_flag.getPos12FullBody_50Hz|sys_flag.getPos12FullBody_125Hz|sys_flag.getPos12LowerLink_50Hz|sys_flag.getPos12LowerLink_125Hz)
                 {
-                    sam_pub.publish(samMsg);
-                    if(lowerLinkCount==12)
+                    if(lowerLinkCount==13)
                     {
+
+
+                        if(mySAM->samPos12[0]>0)
+                            sam_pub.publish(samMsg);
                         /*
                          *  tfCal function
                          */
@@ -204,8 +214,8 @@ int main(int argc, char **argv){
                             angle[i]=((double)mySAM->samPos12[i]-(double)samPos12_hardware[i])*pos12bitTorad*angle_sign[i];
                         }
                         double xValue[12],yValue[12],zValue[12];
-                        xValue[0]=-0.083*cos(angle[1]);
-                        yValue[0]=-0.083*-sin(angle[1])-0.00121;
+                        xValue[0]=-0.08*cos(angle[1]);
+                        yValue[0]=-0.08*-sin(angle[1])-0.00121;
                         zValue[0]=0;
 
                         xValue[1]=xValue[0]*cos(-angle[3])+zValue[0]*-sin(-angle[3])-0.208;
@@ -229,9 +239,9 @@ int main(int argc, char **argv){
                         xValue[5]=yValue[4]*-cos(angle[11])+zValue[4]*sin(angle[11])+0.057;
                         yValue[5]=yValue[4]*-sin(angle[11])+zValue[4]*-cos(angle[11])-0.00034;
                         zValue[5]=xValue[4]-0.06;
-//===================================================
-                        xValue[6]=0.083*-cos(-angle[0]);
-                        yValue[6]=0.083*-sin(-angle[0]);
+                        //===================================================
+                        xValue[6]=0.08*-cos(-angle[0]);
+                        yValue[6]=0.08*-sin(-angle[0]);
                         zValue[6]=0;
 
                         xValue[7]=yValue[6];
@@ -257,18 +267,70 @@ int main(int argc, char **argv){
                         yValue[11]=yValue[10]*-sin(angle[10])+zValue[10]*-cos(angle[10])-0.00034;
                         zValue[11]=xValue[10]-0.06;
 
-      //=========================================
+                        //=========================================
                         samtfCalMsg.CN1=xValue[11];
                         samtfCalMsg.CN2=yValue[11];
-                        samtfCalMsg.CN3=zValue[11];
+                        samtfCalMsg.CN3=zValue[11]+0.588;
                         samtfCalMsg.CN4=xValue[5];
                         samtfCalMsg.CN6=yValue[5];
-                        samtfCalMsg.CN7=zValue[5];
+                        samtfCalMsg.CN7=zValue[5]+0.593;
                         sam_tfCal_pub.publish(samtfCalMsg);
 
                     }
                 }
             }
+
+            if(sys_flag.readyToSendSAM22>0){
+                if(sys_flag.readyToSendSAM22==2){
+                    sys_flag.readyToSendSAM22=0;
+                    if(sys_flag.communicationBusy==0){
+                        sys_flag.readyToSendSAM22=0;
+#ifdef SAM_ACTUATOR_
+                        if(SAMmode[22]==1){
+                            mySAM->setSamPos12(22,SAMpos12[22]);
+                        }else if(SAMmode[22]==2)
+                        {
+                            mySAM->setPassive(22);
+                        }
+#endif
+                    }
+                }else
+                sys_flag.readyToSendSAM22++;
+            }
+
+            if(sys_flag.readyToSend){
+                if(sys_flag.communicationBusy==0){
+                    sys_flag.readyToSend=0;
+                    sys_flag.readyToSendSAM22=1;
+#ifdef SAM_ACTUATOR_
+                    mySAM->setAllPos12(SAMpos12,SAMmode,12);
+//                    mySAM->setAllPos12_upper(SAMpos12,SAMmode,12);
+#endif
+
+                }
+            }
+
+            if(sys_flag.readyToSetPID){
+                if(sys_flag.communicationBusy==0){
+                    sys_flag.readyToSetPID=0;
+#ifdef SAM_ACTUATOR_
+                    mySAM->setAllPDQuick(samP,samD,12);
+#endif
+
+                }
+
+            }
+
+            if(sys_flag.readyToSetTorque){
+                if(sys_flag.communicationBusy==0){
+                    sys_flag.readyToSetTorque=0;
+#ifdef SAM_ACTUATOR_
+                    mySAM->setAllAverageTorque(torque,12);
+#endif
+                }
+            }
+
+
             ros::spinOnce();
             loop_rate.sleep();
             Timer_handler();

@@ -43,7 +43,7 @@ public:
     unsigned char flagDataAvailable_readAllPos12:1;
 
     unsigned char flagDataReceived_readAllPos8:1;
-
+     unsigned char flagReadyToSend:1;
 #define DELTA_SAM_NOISE 100
     unsigned int samPos12[30];
     int pre_samPos12[30];
@@ -76,12 +76,14 @@ public:
     void getAllPos8Torq8();
     void setAllPassive();
     void SAM_Power_enable(unsigned char state);
-    void setAllPos12(unsigned int *Pos,unsigned char numOfSam);
+    void setAllPos12(unsigned int *Pos, unsigned char *mod, unsigned char numOfSam);
+
+
     void setAllAverageTorque(const unsigned int *Atorq,unsigned char numOfSam);
     void getAllAverageTorque();
 
     void setAllPDQuick(const unsigned char *Pvalue,const unsigned char *Dvalue,unsigned char numOfSam);
-     void setAllPIDQuick(const unsigned char *Pvalue,const unsigned char *Dvalue,const unsigned char *Ivalue,unsigned char numOfSam);
+    void setAllPIDQuick(const unsigned char *Pvalue,const unsigned char *Dvalue,const unsigned char *Ivalue,unsigned char numOfSam);
     void getAllPDQuick();
 };
 

@@ -51,7 +51,7 @@ void SAMmodule::Recev_Data_hanlder()
                 memset(samPos12Avail, '\0', sizeof(samPos12Avail));
                 //===============================
                 NumofSam=(dataIndex-3)/4;
-                cout<<"read lower pos"<<endl;
+                //                cout<<"read lower pos"<<endl;
                 for (unsigned char i=0;i<NumofSam;i++)
                 {
                     if(Store_chr[i*4+5]==((Store_chr[i*4+2]^Store_chr[i*4+3]^Store_chr[i*4+4])&0x7F))
@@ -66,9 +66,9 @@ void SAMmodule::Recev_Data_hanlder()
                         if(abs(delta_noise)<DELTA_SAM_NOISE){
                             samPos12[index]=dataPos;
                             samPos12Avail[index]=1;
-
                         }else{
                             ROS_ERROR("error sam feedback: %d | delta noise: %d",index,delta_noise);
+                            samPos12Avail[index]=0;
                         }
 
                         pre_samPos12[index]=dataPos;
@@ -306,7 +306,7 @@ void SAMmodule::SAM_Power_enable(unsigned char state)
     Send_Serial_String(Serial,ba,4);
 }
 
-void SAMmodule::setAllPos12(unsigned int *Pos, unsigned char numOfSam)
+void SAMmodule::setAllPos12(unsigned int *Pos, unsigned char *mod,unsigned char numOfSam)
 {
     unsigned char ba[numOfSam*4+3];
     ba[0] = 0xff;
@@ -317,8 +317,8 @@ void SAMmodule::setAllPos12(unsigned int *Pos, unsigned char numOfSam)
     {
         if((*(Pos+i)>400)&&(*(Pos+i)<3701))
         {
-            ba[refIndex++]=i;//id
-            ba[refIndex++]=(*(Pos+i)>>7)&0x7F;
+            ba[refIndex++]=(i&0x1F)+(((*(mod+i))&0x0C)<<3);//id
+            ba[refIndex++]=((*(Pos+i)>>7)&0x5F)+(((*(mod+i))&0x03)<<5);
             ba[refIndex++]=*(Pos+i)&0x7F;
             ba[refIndex]=(ba[refIndex-3]^ba[refIndex-2]^ba[refIndex-1])&0x7F;
             refIndex++;
@@ -329,6 +329,10 @@ void SAMmodule::setAllPos12(unsigned int *Pos, unsigned char numOfSam)
     //    cout<<endl;
     Send_Serial_String(Serial,ba,numOfSam*4+3);
 }
+
+
+
+
 
 void SAMmodule::setAllAverageTorque(const unsigned int *Atorq, unsigned char numOfSam)
 {
